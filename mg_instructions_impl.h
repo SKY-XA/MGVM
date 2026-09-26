@@ -4,7 +4,7 @@
 #include <iostream>
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY-XA
+ * Copyright © 2026 SKY_XA
  * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
  * Note: Official full bundled interpreters of ML & Lava are copyrighted.
@@ -38,6 +38,7 @@ inline void handler_store_var(VM, void* param) {
     long long val = vm->popStack();
     vm->setVar(inst->str1, val);
 }
+
 inline void handler_print(VM, void* param) {
     INS;
     int poolIdx = static_cast<int>(inst->num);
@@ -263,13 +264,19 @@ inline void handler_halt(VM, void* param) {
     vm->stop();
 }
 
-// 别名指令
-inline void handler_je(VM, void* param)   {
-    handler_jz(vm, param);
+inline void handler_je(VM, void* param) {
+    INS;
+    long long b = vm->popStack();
+    long long a = vm->popStack();
+    if(a == b) vm->setPC(inst->num);
 }
-inline void handler_jne(VM, void* param)  {
-    handler_jnz(vm, param);
+inline void handler_jne(VM, void* param) {
+    INS;
+    long long b = vm->popStack();
+    long long a = vm->popStack();
+    if(a != b) vm->setPC(inst->num);
 }
+
 
 // ==================== 指令注册 ====================
 inline void registerAllInstructions(InstructionHandler handlers[]) {

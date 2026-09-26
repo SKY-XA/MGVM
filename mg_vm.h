@@ -2,8 +2,8 @@
 #define MG_VM_H
 /*
  * MGVM — Stack‑based Virtual Machine Assembler Interpreter
- * Copyright © 2026 SKY-XA
- * Version: V1.2.6
+ * Copyright © 2026 SKY_XA
+ * Version: V1.2.7
  * This is the underlying runtime for self‑developed ML (MemLock) and Lava languages.
  * Full license terms are located in repository root: LICENSE / LICENSE‑CH.
  * Note: Official full‑version interpreters bundled with ML and Lava may retain separate copyright.
@@ -21,7 +21,7 @@ struct SymbolEntry {
     int32_t pc;
 };
 
-#define MG_VM_HAS_VERSION_NUMBER 1 // 是否有版本号字符串标记（不得删除）
+#define MG_VM_HAS_VERSION_NUMBER 1
 class MGVM {
 public:
     MGVM();
@@ -115,28 +115,29 @@ public:
 
 
     // 版本号
-	std::string Version = "ML-ASM VM free V1.2.6"; // 当前版本号
-	std::string version = "ML-ASM VM free V1.2.5"; // 上一个版本号
-	std::string previous_version = version;
-	std::string next_version = "ML-ASM VM free V1.2.7"; // 下一个版本号
-	std::string VERSION = "ML Vt0.x.x-X 0\nLava Vt0.x.x-X 0"; // 所属ML/Lava主版本号
-	int version_code = 27;
-	std::string update_log = R"(
-V1.2.5: add symbol table + string pool {
-这个版本对字节码的格式进行了修改，
-增添了标签字符段（符号表段）和字符串段
-This version modified the format of the bytecode,
-adding a label character field (symbol table field) and a string field.
-	
-}
-V1.2.6: Add disassembly tool function added {
-	这个版本添加了反汇编工具函数，
-	可以根据.mgc字节码，将其还原成.mgasm汇编
-	This version adds disassembly tool functions,
-	which can reverse the .mgc bytecode into .mgasm assembly according to .mgc bytecodes.
-}
-
-)"; // 更新日志 "
+    std::string Version = "ML‑ASM VM free V1.2.8\n";
+    std::string version = "ML‑ASM VM free V1.2.7\n";
+    std::string previous_version = version;
+    std::string next_version = "ML‑ASM VM free V1.2.9\n";
+    std::string VERSION = "ML Vt0.x.x‑X 0\nLava Vt0.x.x‑X 0";
+    int version_code = 30;
+    std::string update_log = R"(
+    V1.2.5: add symbol table + string pool{
+        这个版本对字节码的格式进行了修改，
+        增添了标签字符段（符号表段）和字符串段
+        This version modified the format of the bytecode,
+        adding a label character field (symbol table field) and a string field.
+        
+    }
+    V1.2.6: Add disassembly tool function added{
+        这个版本添加了反汇编工具函数，
+        可以根据.mgc字节码，将其还原成.mgasm汇编
+        This version adds disassembly tool functions,
+         which can reverse the .mgc bytecode into .mgasm assembly according to .mgc bytecodes.
+    }
+    V1.2.7 : 新增更多复合指令
+    V1.2.8 : 给字节码新增了变量名表段
+    )";
 
 private:
     std::string trim(const std::string& s);
@@ -156,5 +157,5 @@ MGVM _asm_vm__;
 
 #include "mg_instructions_impl.h"
 #include "mg_vm_impl.h"
-// V1.2.6
+// V1.2.7
 // V1.2.5 add symbol table + string pool

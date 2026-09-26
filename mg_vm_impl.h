@@ -13,7 +13,7 @@
 #include <unordered_map>
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY-XA
+ * Copyright © 2026 SKY_XA
  * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
  * Note: Official full bundled interpreters of ML & Lava are copyrighted.
@@ -322,33 +322,44 @@ inline bool MGVM::compileToBytecode(std::vector<uint8_t>& outBuf)
         writeU32(static_cast<uint32_t>(s.size()));
         outBuf.insert(outBuf.end(), s.begin(), s.end());
     };
-
     // 1.魔数 MGC
     writeU8('M');
     writeU8('G');
     writeU8('C');
-    // 字节码格式版本
-    const int32_t BC_VERSION = 2;
+    // ============升级版本为3============
+    const int32_t BC_VERSION = 3;
     writeI32(BC_VERSION);
 
-    // 2.写入符号表段
+    // =========【新增段：变量符号表 varIndex name→id】============
+    writeU32(static_cast<uint32_t>(varIndex.size()));
+    for(auto& kv : varIndex)
+    {
+        writeStr(kv.first);
+        writeI32(static_cast<int32_t>(kv.second));
+    }
+
+    //2.写入原来的label符号表段(symbolTable)
     writeU32(static_cast<uint32_t>(symbolTable.size()));
     for(auto& se : symbolTable) {
         writeStr(se.name);
         writeI32(se.pc);
     }
-
     //3.写入字符串常量池段
     writeU32(static_cast<uint32_t>(stringPool.size()));
     for(auto& s : stringPool) {
         writeStr(s);
     }
-
     // 先临时构建指令流
     std::vector<uint8_t> codeBuf;
     auto cbWriteI32 = [&](int32_t val) {
         const uint8_t* p = reinterpret_cast<const uint8_t*>(&val);
         codeBuf.insert(codeBuf.end(), p, p + 4);
+    };
+    auto cbWriteStr = [&](const std::string& s) {
+        uint32_t len = static_cast<uint32_t>(s.size());
+        const uint8_t* pl = reinterpret_cast<const uint8_t*>(&len);
+        codeBuf.insert(codeBuf.end(), pl, pl+4);
+        codeBuf.insert(codeBuf.end(), s.begin(), s.end());
     };
 
     for(const auto& inst : code)
@@ -390,15 +401,18 @@ inline bool MGVM::compileToBytecode(std::vector<uint8_t>& outBuf)
             if(varIndex.find(inst.str1) != varIndex.end())
                 vid = static_cast<int32_t>(varIndex[inst.str1]);
             cbWriteI32(vid);
+            //【新增：保存变量名字字符串inst.str1】
+            cbWriteStr(inst.str1);
             break;
         }
         case op_mov:
         {
-            int32_t id1 = 0, id2 = 0;
+            int32_t id1 = 0;
             if(varIndex.count(inst.str1)) id1 = (int32_t)varIndex[inst.str1];
-            if(varIndex.count(inst.str2)) id2 = (int32_t)varIndex[inst.str2];
             cbWriteI32(id1);
-            cbWriteI32(id2);
+            //【新增：保存mov的str1 str2】
+            cbWriteStr(inst.str1);
+            cbWriteStr(inst.str2);
             cbWriteI32(static_cast<int32_t>(inst.num));
             break;
         }
@@ -453,7 +467,6 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
     size_t offset = 0;
     size_t total = bytecode.size();
     if(total < 12) return;
-
     auto readU8  = [&]() -> uint8_t { return bytecode[offset++]; };
     auto readU32 = [&]() -> uint32_t {
         uint32_t v = *(reinterpret_cast<const uint32_t*>(bytecode.data()+offset));
@@ -471,7 +484,6 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         offset += len;
         return s;
     };
-
     // 校验魔数
     char m0 = static_cast<char>(readU8());
     char m1 = static_cast<char>(readU8());
@@ -481,13 +493,23 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         return;
     }
     int32_t bcVer = readI32();
-    const int32_t EXPECT_VER = 2;
+    const int32_t EXPECT_VER = 3;
     if(bcVer != EXPECT_VER) {
         std::cerr<<"[runBytecode] 字节码版本不匹配，需要v"<<EXPECT_VER<<"，文件是v"<<bcVer<<"\n";
         return;
     }
 
-    // 读符号表
+    // =========【新增：读取变量符号表，恢复varIndex】=========
+    uint32_t varTabCount = readU32();
+    varIndex.clear();
+    for(uint32_t i=0; i < varTabCount; ++i)
+    {
+        std::string vname = readStr();
+        int32_t vid = readI32();
+        varIndex[vname] = vid;
+    }
+
+    // 读原来label符号表
     uint32_t symCount = readU32();
     symbolTable.reserve(symCount);
     for(uint32_t i=0; i<symCount; i++) {
@@ -496,17 +518,23 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         e.pc = readI32();
         symbolTable.push_back(e);
     }
-
     // 读字符串常量池
     uint32_t strCount = readU32();
     stringPool.reserve(strCount);
     for(uint32_t i=0; i<strCount; i++) {
         stringPool.push_back(readStr());
     }
-
     // 读指令流
     uint32_t codeLen = readU32();
     size_t codeStartOff = offset;
+
+    // 从指令流读取字符串的局部lambda
+    auto cbReadStr = [&]()->std::string{
+        uint32_t len = readU32();
+        std::string s(bytecode.data()+offset, bytecode.data()+offset+len);
+        offset += len;
+        return s;
+    };
 
     // 解析指令流重建code数组
     while (offset < codeStartOff + codeLen)
@@ -547,13 +575,20 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         case op_dup:
         case op_swap:
         case op_not:
+        {
             inst.num = readI32();
+            //【新增读回变量名字回填str1】
+            inst.str1 = cbReadStr();
             break;
+        }
         case op_mov:
-            readI32();
-            readI32();
+        {
+            readI32(); // id1，丢弃，我们已经有str1/str2
+            inst.str1 = cbReadStr();
+            inst.str2 = cbReadStr();
             inst.num = readI32();
             break;
+        }
         case op_add:
         case op_sub:
         case op_mul:
@@ -578,6 +613,7 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         run();
     }
 }
+
 inline std::string MGVM::disasm()
 {
     std::ostringstream oss;
@@ -587,7 +623,6 @@ inline std::string MGVM::disasm()
     {
         pcToLabels[entry.pc].push_back(entry.name);
     }
-
     for(int pc = 0; pc < (int)code.size(); pc++)
     {
         auto& inst = code[pc];
@@ -599,7 +634,6 @@ inline std::string MGVM::disasm()
                 oss << lab << ":\n";
             }
         }
-
         // 输出指令
         auto opIt = std::find_if(OPCODE_MAP.begin(), OPCODE_MAP.end(),
         [&](const std::pair<std::string,OpCode>& p) {
@@ -648,7 +682,7 @@ inline std::string MGVM::disasm()
             int idx = static_cast<int>(inst.num);
             if(idx == -1)
             {
-                // 打印栈
+                // 打印栈，无参
             }
             else
             {
@@ -663,6 +697,7 @@ inline std::string MGVM::disasm()
             }
             break;
         }
+        // =========变量指令：直接输出 inst.str1 变量名字=========
         case op_load_var:
         case op_store_var:
         case op_inc_to:
@@ -676,19 +711,22 @@ inline std::string MGVM::disasm()
         case op_swap:
         case op_not:
         {
-            int vid = static_cast<int>(inst.num);
-            oss << " var(" << vid << ")";
+            oss << " " << inst.str1;
             break;
         }
+        // =========修复mov反汇编，还原mov dest, src语法=========
         case op_mov:
         {
-            // mov 保存 id1,id2,num
-            // 注意：从字节码加载后str1/str2丢失，只能输出id
-            // inst.num 是立即数
-            oss << " var(??), var(??)";
-            if(inst.num != 0)
+            oss << " " << inst.str1 << ",";
+            if (!inst.str2.empty())
             {
-                oss << ", " << inst.num;
+                // 源是变量
+                oss << " " << inst.str2;
+            }
+            else
+            {
+                // 源是立即数 inst.num
+                oss << " " << inst.num;
             }
             break;
         }
