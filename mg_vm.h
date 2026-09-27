@@ -2,7 +2,7 @@
 #define MG_VM_H
 /*
  * MGVM — Stack‑based Virtual Machine Assembler Interpreter
- * Copyright © 2026 SKY_XA
+ * Copyright © 2026 SKY-XA
  * Version: V1.2.7
  * This is the underlying runtime for self‑developed ML (MemLock) and Lava languages.
  * Full license terms are located in repository root: LICENSE / LICENSE‑CH.

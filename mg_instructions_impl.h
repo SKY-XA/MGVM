@@ -4,7 +4,7 @@
 #include <iostream>
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY_XA
+ * Copyright © 2026 SKY-XA
  * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
  * Note: Official full bundled interpreters of ML & Lava are copyrighted.
