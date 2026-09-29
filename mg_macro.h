@@ -38,6 +38,9 @@ inline MacroExpandResult macro_loop(const std::vector<std::string>& args) {
 
 inline MacroExpandResult macro_print_str(const std::vector<std::string>& args) {
     MacroExpandResult out;
+    // 注意，这套虚拟机目前对于字符串的解析方式与正常的有些区别
+    // 当虚拟机匹配到print后面的第一个双引号后，一直到行尾都会被认定成字符串
+    // 不需要配一对引号
     out.push_back("print \"" + args[0] /*+ "\""*/);
     return out;
 }
@@ -145,7 +148,7 @@ inline MacroExpandResult macro_print_var(const std::vector<std::string>& args) {
 
 inline MacroExpandResult macro_println_str(const std::vector<std::string>& args) {
     MacroExpandResult out;
-    out.push_back("print \"" + args[0] + "\\n\"");
+    out.push_back("print \"" + args[0] + "\\n");
     return out;
 }
 
@@ -204,28 +207,46 @@ inline MacroExpandResult macro_if_ne(const std::vector<std::string>& args) {
     return out;
 }
 
-// ==================== 【新增：循环辅助】 ====================
-inline MacroExpandResult macro_do_inc(const std::vector<std::string>& args) {
-    MacroExpandResult out;
-    auto var = args[0], target = args[1], jmp_label = args[2];
-    out.push_back("push " + target);
-    out.push_back("inc_to " + var);
-    out.push_back("jnz " + jmp_label);
-    return out;
-}
-
-// ==================== 【新增：交换扩展】 ====================
 inline MacroExpandResult macro_swap3(const std::vector<std::string>& args) {
     MacroExpandResult out;
-    auto a=args[0],b=args[1],c=args[2];
+    auto a = args[0], b = args[1], c = args[2];
+    // 栈： a b c
     out.push_back("load_var " + a);
     out.push_back("load_var " + b);
     out.push_back("load_var " + c);
-    out.push_back("push " + a);
-    out.push_back("push " + c);
-    out.push_back("push " + b);
+    // 栈布局 [a, b, c]
+    // pop顺序：c b a
+    out.push_back("pop " + a); // a = c
+    out.push_back("pop " + c); // c = b
+    out.push_back("pop " + b); // b = a(old)
+    // 完成轮换 a←c, c←b, b←原来a；栈回归平衡
     return out;
 }
+
+inline MacroExpandResult macro_var_inc_to(const std::vector<std::string>& args) {
+    MacroExpandResult out;
+    std::string var = args[0], target = args[1];
+    out.push_back("push " + target);
+    out.push_back("inc_to " + var);
+    // inc_to会push结果，这里弹出丢弃，保证栈平衡，避免栈垃圾堆积
+    out.push_back("pop");
+    return out;
+}
+
+inline MacroExpandResult macro_do_inc(const std::vector<std::string>& args) {
+    MacroExpandResult out;
+    auto var = args[0], target = args[1], jmp_body = args[2];
+    // do‑while：先执行循环体，再判断条件
+    // 1. 变量单步自增
+    out.push_back("inc " + var);
+    // 2. 压入 var, target，比较 var < target，如果成立跳回循环头部继续
+    out.push_back("load_var " + var);
+    out.push_back("push " + target);
+    out.push_back("jl " + jmp_body);
+    // jl会pop掉两个栈元素，栈恢复平衡
+    return out;
+}
+
 
 inline const std::unordered_map<std::string, MacroHandler> MACRO_MAP = {
     {"mov_add", macro_mov_add},
@@ -251,7 +272,7 @@ inline const std::unordered_map<std::string, MacroHandler> MACRO_MAP = {
     {"do_inc", macro_do_inc},
     {"swap3", macro_swap3},
 
-    {"loop", macro_loop},
+    {"var_inc_to", macro_var_inc_to},
     {"print_str", macro_print_str},
     {"swap_var", macro_swap_var}
 };
