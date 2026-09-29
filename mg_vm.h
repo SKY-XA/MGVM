@@ -3,7 +3,7 @@
 /*
  * MGVM — Stack‑based Virtual Machine Assembler Interpreter
  * Copyright © 2026 SKY-XA
- * Version: V1.2.7
+ * Version: V1.2.9
  * This is the underlying runtime for self‑developed ML (MemLock) and Lava languages.
  * Full license terms are located in repository root: LICENSE / LICENSE‑CH.
  * Note: Official full‑version interpreters bundled with ML and Lava may retain separate copyright.
@@ -29,6 +29,9 @@ public:
     bool parseASM(const std::string& asmCode);
     void run();
     void stop();
+    
+    std::vector<long long> heap;
+    size_t heap_bump = 0;
 
     // 【极速优化】数组栈，完全替代std::stack
     std::vector<long long> stack;
@@ -115,12 +118,12 @@ public:
 
 
     // 版本号
-    std::string Version = "ML‑ASM VM free V1.2.8\n";
-    std::string version = "ML‑ASM VM free V1.2.7\n";
+    std::string Version = "ML‑ASM VM free V1.2.9\n";
+    std::string version = "ML‑ASM VM free V1.2.8\n";
     std::string previous_version = version;
-    std::string next_version = "ML‑ASM VM free V1.2.9\n";
+    std::string next_version = "ML‑ASM VM free V1.2.10\n";
     std::string VERSION = "ML Vt0.x.x‑X 0\nLava Vt0.x.x‑X 0";
-    int version_code = 30;
+    int version_code = 32;
     std::string update_log = R"(
     V1.2.5: add symbol table + string pool{
         这个版本对字节码的格式进行了修改，
@@ -137,6 +140,7 @@ public:
     }
     V1.2.7 : 新增更多复合指令
     V1.2.8 : 给字节码新增了变量名表段
+    V1.2.9 : 增加了alloc, load_mem, store_mem 三个新指令，以及两个复合指令
     )";
 
 private:
@@ -157,5 +161,5 @@ MGVM _asm_vm__;
 
 #include "mg_instructions_impl.h"
 #include "mg_vm_impl.h"
-// V1.2.7
+// V1.2.9
 // V1.2.5 add symbol table + string pool

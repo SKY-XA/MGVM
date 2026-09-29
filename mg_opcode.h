@@ -63,6 +63,10 @@ enum OpCode {
     op_jle,
     op_jge,
     op_input,
+    
+    op_alloc,
+    op_load_mem,
+    op_store_mem,
 
     // 【极限优化必需】数组大小标记，不影响原有逻辑
     OP_COUNT

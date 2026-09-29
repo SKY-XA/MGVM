@@ -277,6 +277,43 @@ inline void handler_jne(VM, void* param) {
     if(a != b) vm->setPC(inst->num);
 }
 
+// ==================== 堆内存指令 alloc / load_mem / store_mem ====================
+// alloc: pop count，分配count个long long堆单元；压入起始下标；分配失败压入-1
+inline void handler_alloc(VM, void* param) {
+    INS;
+    long long count = vm->popStack();
+    const long long MAX_ALLOC = 1000000;
+    if(count <= 0 || count > MAX_ALLOC) {
+        vm->pushStack(-1);
+        return;
+    }
+    size_t start = vm->heap_bump;
+    vm->heap.resize(vm->heap_bump + (size_t)count, 0LL);
+    vm->heap_bump += (size_t)count;
+    vm->pushStack(static_cast<long long>(start));
+}
+
+// load_mem: pop addr，读取heap[addr]，压栈；越界返回0
+inline void handler_load_mem(VM, void* param) {
+    INS;
+    long long addr = vm->popStack();
+    if(addr < 0 || static_cast<size_t>(addr) >= vm->heap.size()) {
+        vm->pushStack(0);
+        return;
+    }
+    vm->pushStack(vm->heap[static_cast<size_t>(addr)]);
+}
+
+// store_mem: pop addr; pop val; val写入heap[addr];越界直接丢弃
+inline void handler_store_mem(VM, void* param) {
+    INS;
+    long long addr = vm->popStack();
+    long long val = vm->popStack();
+    if(addr <0 || static_cast<size_t>(addr) >= vm->heap.size()) {
+        return;
+    }
+    vm->heap[static_cast<size_t>(addr)] = val;
+}
 
 // ==================== 指令注册 ====================
 inline void registerAllInstructions(InstructionHandler handlers[]) {
@@ -319,6 +356,9 @@ inline void registerAllInstructions(InstructionHandler handlers[]) {
     handlers[op_jle]       = handler_jle;
     handlers[op_jge]       = handler_jge;
     handlers[op_input]	 = handler_input;
+    handlers[op_alloc]     = handler_alloc;
+    handlers[op_load_mem]  = handler_load_mem;
+    handlers[op_store_mem] = handler_store_mem;
 }
 
 #undef VM

@@ -246,6 +246,27 @@ inline MacroExpandResult macro_do_inc(const std::vector<std::string>& args) {
     // jl会pop掉两个栈元素，栈恢复平衡
     return out;
 }
+// arr_set(ptr, offset, value) → heap[ptr+offset]=value
+inline MacroExpandResult macro_arr_set(const std::vector<std::string>& args) {
+    MacroExpandResult out;
+    auto ptr = args[0], off = args[1], val = args[2];
+    out.push_back("load_var " + ptr);
+    out.push_back("push " + off);
+    out.push_back("add");
+    out.push_back("load_var " + val);
+    out.push_back("store_mem");
+    return out;
+}
+// arr_get(ptr,offset) → push heap[ptr+offset]
+inline MacroExpandResult macro_arr_get(const std::vector<std::string>& args) {
+    MacroExpandResult out;
+    auto ptr = args[0], off = args[1];
+    out.push_back("load_var " + ptr);
+    out.push_back("push " + off);
+    out.push_back("add");
+    out.push_back("load_mem");
+    return out;
+}
 
 
 inline const std::unordered_map<std::string, MacroHandler> MACRO_MAP = {
@@ -274,7 +295,10 @@ inline const std::unordered_map<std::string, MacroHandler> MACRO_MAP = {
 
     {"var_inc_to", macro_var_inc_to},
     {"print_str", macro_print_str},
-    {"swap_var", macro_swap_var}
+    {"swap_var", macro_swap_var},
+        
+    {"arr_set", macro_arr_set},
+    {"arr_get", macro_arr_get}
 };
 
 

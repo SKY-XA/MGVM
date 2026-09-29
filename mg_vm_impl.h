@@ -59,7 +59,10 @@ inline const std::unordered_map<std::string, OpCode> OPCODE_MAP = {
     {"jne",       op_jne},
     {"jle",       op_jle},
     {"jge",       op_jge},
-    {"input",     op_input}
+    {"input",     op_input},
+    {"alloc",     op_alloc},
+    {"load_mem",  op_load_mem},
+    {"store_mem", op_store_mem}            
 };
 
 inline std::string MGVM::trim(const std::string& s) {
@@ -98,6 +101,10 @@ inline void MGVM::reset() {
     // 新增：重置符号表、字符串池
     symbolTable.clear();
     stringPool.clear();
+    
+    // 重置堆状态
+    heap.clear();
+    heap_bump = 0;
 }
 
 inline MGVM::MGVM() {
@@ -244,6 +251,9 @@ inline bool MGVM::parseASM(const std::string& asmCode) {
             break;
         }
         case op_input:
+        case op_alloc:
+        case op_load_mem:
+        case op_store_mem:
             break;
         default:
             break;
@@ -430,6 +440,9 @@ inline bool MGVM::compileToBytecode(std::vector<uint8_t>& outBuf)
         case op_nop:
         case op_halt:
         case op_input:
+        case op_alloc:
+        case op_load_mem:
+        case op_store_mem:
             break;
         default:
             break;
@@ -603,6 +616,9 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         case op_nop:
         case op_halt:
         case op_input:
+        case op_alloc:
+        case op_load_mem:
+        case op_store_mem:
             break;
         default:
             break;
@@ -744,6 +760,9 @@ inline std::string MGVM::disasm()
         case op_nop:
         case op_halt:
         case op_input:
+        case op_alloc:
+        case op_load_mem:
+        case op_store_mem:
             // 无参数
             break;
         default:
