@@ -118,11 +118,11 @@ public:
 
 
     // 版本号
-    std::string Version = "ML‑ASM VM free V1.2.9\n";
-    std::string version = "ML‑ASM VM free V1.2.8\n";
+    std::string Version = "ML-ASM VM free V1.2.9\n";
+    std::string version = "ML-ASM VM free V1.2.8\n";
     std::string previous_version = version;
-    std::string next_version = "ML‑ASM VM free V1.2.10\n";
-    std::string VERSION = "ML Vt0.x.x‑X 0\nLava Vt0.x.x‑X 0";
+    std::string next_version = "ML-ASM VM free V1.2.10\n";
+    std::string VERSION = "ML Vt0.x.x-X 0\nLava Vt0.x.x-X 0";
     int version_code = 32;
     std::string update_log = R"(
     V1.2.5: add symbol table + string pool{
