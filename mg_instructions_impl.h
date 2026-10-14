@@ -17,7 +17,7 @@
 // ==================== 基础指令 ====================
 inline void handler_push(VM, void* param) {
     INS;
-    vm->stack[++vm->sp] = inst->num;
+    vm->pushStack(inst->num);
 }
 
 
