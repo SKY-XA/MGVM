@@ -95,6 +95,8 @@ inline void MGVM::reset() {
     pc = 0;
     isRunning = false;
     vars.clear();
+    stack.clear();
+    stack.reserve(4096);
     str_stack.clear();
     str_stack.reserve(4096);
 
