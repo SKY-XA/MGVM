@@ -1,13 +1,15 @@
 #ifndef MG_VM_H
 #define MG_VM_H
 /*
- * MGVM — Stack‑based Virtual Machine Assembler Interpreter
- * Copyright © 2026 SKY-XA
- * Version: V1.2.9
- * This is the underlying runtime for self‑developed ML (MemLock) and Lava languages.
- * Full license terms are located in repository root: LICENSE / LICENSE‑CH.
- * Note: Official full‑version interpreters bundled with ML and Lava may retain separate copyright.
+ * MGVM Implementation
+ * Copyright © 2026 SKY‑XA
+ * Version: V1.3.1
+ * Underlying runtime implementation for two self‑developed programming languages.
+ * These two languages may be developed and released in the future.
+ * Full license terms: see repository root LICENSE / LICENSE‑CH.
+ * Note: Official full bundled interpreters are copyrighted.
  */
+
 
 #include "mg_opcode.h"
 #include <cstdint>
@@ -38,6 +40,25 @@ public:
     std::vector<std::string> str_stack;
     int str_sp=0;
     int sp=0;
+    // ========== 新增浮点栈 ==========
+    std::vector<double> fstack;
+    int fsp = 0;
+
+    inline void pushF(double v) {
+        if (fsp >= (int)fstack.size()) {
+            fstack.push_back(v);
+        } else {
+            fstack[fsp] = v;
+        }
+        fsp++;
+    }
+    inline double popF() {
+        if (fsp <= 0) return 0.0;
+        return fstack[--fsp];
+    }
+    inline bool fstackEmpty() { return fsp == 0; }
+    inline int getFStackSize() { return fsp; }
+
 
     inline void pushStr(const std::string& s) {
         if (str_sp >= (int)str_stack.size()) {
@@ -118,11 +139,11 @@ public:
 
 
     // 版本号
-    std::string Version = "ML-ASM VM free V1.2.9\n";
-    std::string version = "ML-ASM VM free V1.2.8\n";
+    std::string Version = "ML‑ASM VM free V1.3.1\n";
+    std::string version = "ML‑ASM VM free V1.3.0\n";
     std::string previous_version = version;
-    std::string next_version = "ML-ASM VM free V1.2.10\n";
-    std::string VERSION = "ML Vt0.x.x-X 0\nLava Vt0.x.x-X 0";
+    std::string next_version = "ML‑ASM VM free V1.3.2\n";
+    std::string VERSION = "ML Vt0.x.x‑X 0\nLavium Vt0.x.x‑X 0 (Only an internal name)";
     int version_code = 32;
     std::string update_log = R"(
     V1.2.5: add symbol table + string pool{
@@ -141,6 +162,9 @@ public:
     V1.2.7 : 新增更多复合指令
     V1.2.8 : 给字节码新增了变量名表段
     V1.2.9 : 增加了alloc, load_mem, store_mem 三个新指令，以及两个复合指令
+    V1.3.0 : 增加了ext, ffi_call 两个指令，使得用户可以使用同样由C++编写的
+    ，但不占用主指令空间的指令函数
+    V1.3.1 : 增加了浮点栈及其相关逻辑
     )";
 
 private:
@@ -161,5 +185,5 @@ MGVM _asm_vm__;
 
 #include "mg_instructions_impl.h"
 #include "mg_vm_impl.h"
-// V1.2.9
+// V1.3.1
 // V1.2.5 add symbol table + string pool

@@ -8,11 +8,13 @@
 #include "mg_vm.h"
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY-XA
- * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
+ * Copyright © 2026 SKY‑XA
+ * Underlying runtime implementation for two self‑developed programming languages.
+ * These two languages may be developed and released in the future.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
- * Note: Official full bundled interpreters of ML & Lava are copyrighted.
+ * Note: Official full bundled interpreters are copyrighted.
  */
+
 namespace mg_macro {
 // 复用VM内置trim/toLower工具，全局文本展开
 inline std::string trim(const std::string& s) {

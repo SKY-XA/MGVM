@@ -1,14 +1,33 @@
 #pragma once
 #include "mg_vm.h"
 #include "mg_opcode.h"
+#include "mg_ext_op.h"
+#include "mg_ext_op_impl.h"
 #include <iostream>
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY-XA
- * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
+ * Copyright © 2026 SKY‑XA
+ * Underlying runtime implementation for two self‑developed programming languages.
+ * These two languages may be developed and released in the future.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
- * Note: Official full bundled interpreters of ML & Lava are copyrighted.
+ * Note: Official full bundled interpreters are copyrighted.
  */
+// FFI外部回调函数签名：回调内部自行从vm栈读取参数、压入返回值
+using FFIFn = void (*)(MGVM* vm);
+
+// FFI全局函数注册表；汇编 op_ffi_call N 的 N 就是此vector下标
+inline std::vector<FFIFn> g_ffi_table;
+
+/**
+ * @brief 注册外部FFI函数，返回分配得到的函数ID，汇编中使用该id调用
+ */
+inline int FfiRegister(FFIFn fn)
+{
+    int id = static_cast<int>(g_ffi_table.size());
+    g_ffi_table.push_back(fn);
+    return id;
+}
+
 
 
 #define VM MGVM* vm
@@ -314,6 +333,46 @@ inline void handler_store_mem(VM, void* param) {
     }
     vm->heap[static_cast<size_t>(addr)] = val;
 }
+inline void handler_ext(VM, void* param) {
+     INS;
+     int sub_op = static_cast<int>(inst->num);
+     int builtin_cnt = GetBuiltinExtOpCount();
+     ExtHandler fn = nullptr;
+     if(sub_op >=0 && sub_op < builtin_cnt)
+     {
+         fn = GetBuiltinExtHandlerTable()[sub_op];
+     }
+     else if(sub_op >= builtin_cnt)
+     {
+         int dyn_idx = sub_op - builtin_cnt;
+         if(dyn_idx >=0 && dyn_idx < (int)g_dynamic_ext_handlers.size())
+         {
+             fn = g_dynamic_ext_handlers[dyn_idx];
+         }
+     }
+     if(!fn)
+     {
+         ext_handler_invalid(vm, param);
+         return;
+     }
+     fn(vm, param);
+}
+inline void handler_ffi_call(VM, void* param)
+{
+    INS;
+    // inst.num 存储FFI函数ID
+    int64_t fn_id = inst->num;
+
+    // 边界校验
+    if (fn_id < 0 || static_cast<size_t>(fn_id) >= g_ffi_table.size())
+    {
+        // 无效id，直接返回，不做任何操作；可选择输出警告日志
+        return;
+    }
+
+    FFIFn target_fn = g_ffi_table[static_cast<size_t>(fn_id)];
+    target_fn(vm); // 调用外部C++回调，回调全权负责栈读写
+}
 
 // ==================== 指令注册 ====================
 inline void registerAllInstructions(InstructionHandler handlers[]) {
@@ -359,6 +418,8 @@ inline void registerAllInstructions(InstructionHandler handlers[]) {
     handlers[op_alloc]     = handler_alloc;
     handlers[op_load_mem]  = handler_load_mem;
     handlers[op_store_mem] = handler_store_mem;
+    handlers[op_ext]      = handler_ext;
+    handlers[op_ffi_call] = handler_ffi_call;
 }
 
 #undef VM

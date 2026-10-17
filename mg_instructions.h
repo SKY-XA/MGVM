@@ -2,11 +2,13 @@
 #define MG_INSTRUCTIONS_H
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY-XA
- * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
+ * Copyright © 2026 SKY‑XA
+ * Underlying runtime implementation for two self‑developed programming languages.
+ * These two languages may be developed and released in the future.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
- * Note: Official full bundled interpreters of ML & Lava are copyrighted.
+ * Note: Official full bundled interpreters are copyrighted.
  */
+
 
 #include "mg_opcode.h"
 

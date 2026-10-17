@@ -3,6 +3,7 @@
 #include "mg_opcode.h"
 #include "mg_instructions.h"
 #include "mg_macro_expand.h"
+#include "mg_ext_op.h"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -62,7 +63,9 @@ inline const std::unordered_map<std::string, OpCode> OPCODE_MAP = {
     {"input",     op_input},
     {"alloc",     op_alloc},
     {"load_mem",  op_load_mem},
-    {"store_mem", op_store_mem}            
+    {"store_mem", op_store_mem},
+    {"ext",       op_ext},
+    {"ffi_call",   op_ffi_call}
 };
 
 inline std::string MGVM::trim(const std::string& s) {
@@ -95,18 +98,22 @@ inline void MGVM::reset() {
     pc = 0;
     isRunning = false;
     vars.clear();
-    stack.clear();
     stack.reserve(4096);
+    stack.clear();
     str_stack.clear();
     str_stack.reserve(4096);
 
     // 新增：重置符号表、字符串池
     symbolTable.clear();
     stringPool.clear();
-    
+
     // 重置堆状态
     heap.clear();
     heap_bump = 0;
+
+    // 重置浮点栈状态
+    fstack.clear();
+    fsp = 0;
 }
 
 inline MGVM::MGVM() {
@@ -114,13 +121,14 @@ inline MGVM::MGVM() {
     vars.reserve(256);
     stack.reserve(4096);
     str_stack.reserve(4096);
+    fstack.reserve(4096);
     registerAllInstructions(handlers);
 }
 
 inline bool MGVM::parseASM(const std::string& asmCode) {
     std::string expandedAsm = mg_macro::ExpandAllMacro(asmCode);
     std::istringstream stream(expandedAsm);
-    reset();
+    //reset();
     std::string line;
     int lineNum = 0;
     std::vector<std::pair<std::string, int>> labelWaitList;
@@ -171,6 +179,37 @@ inline bool MGVM::parseASM(const std::string& asmCode) {
 
         switch (inst.op) {
         case op_push:
+        case op_ext: {
+            std::string token;
+            lineStream >> token;
+            // 第一步：尝试解析为整数子op编号
+            char* endp=nullptr;
+            long long numval = std::strtoll(token.c_str(), &endp, 10);
+            if(endp == token.c_str() + token.size()) {
+                inst.num = numval;
+            } else {
+                // 不是数字，查子op符号名
+                auto& nameMap = GetExtOpNameToIdMap();
+                auto it = nameMap.find(token);
+                if(it == nameMap.end()) {
+                    std::cerr << "[解析错误] 第" << lineNum << "行：ext 未知子操作 '"<<token<<"'\n";
+                    return false;
+                }
+                inst.num = it->second;
+            }
+            // 如果是 extop_fpush，后面读取浮点立即数存入inst.fnum
+            if(static_cast<int>(inst.num) == extop_fpush)
+            {
+                std::string fToken;
+                lineStream >> fToken;
+                double fv = std::stod(fToken);
+                inst.fnum = fv;
+            }
+            break;
+        }
+
+
+        case op_ffi_call:
             lineStream >> inst.num;
             break;
         case op_load_var:
@@ -338,8 +377,8 @@ inline bool MGVM::compileToBytecode(std::vector<uint8_t>& outBuf)
     writeU8('M');
     writeU8('G');
     writeU8('C');
-    // ============升级版本为3============
-    const int32_t BC_VERSION = 3;
+    // ============升级版本为4============
+    const int32_t BC_VERSION = 4;
     writeI32(BC_VERSION);
 
     // =========【新增段：变量符号表 varIndex name→id】============
@@ -446,6 +485,17 @@ inline bool MGVM::compileToBytecode(std::vector<uint8_t>& outBuf)
         case op_load_mem:
         case op_store_mem:
             break;
+        case op_ext:
+        case op_ffi_call:
+            cbWriteI32(static_cast<int32_t>(inst.num));
+            // ✅只有op_ext才写fnum
+            if(inst.op == op_ext)
+            {
+                const uint8_t* fd = reinterpret_cast<const uint8_t*>(&inst.fnum);
+                codeBuf.insert(codeBuf.end(), fd, fd + sizeof(double));
+            }
+            break;
+
         default:
             break;
         }
@@ -508,7 +558,7 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         return;
     }
     int32_t bcVer = readI32();
-    const int32_t EXPECT_VER = 3;
+    const int32_t EXPECT_VER = 4;
     if(bcVer != EXPECT_VER) {
         std::cerr<<"[runBytecode] 字节码版本不匹配，需要v"<<EXPECT_VER<<"，文件是v"<<bcVer<<"\n";
         return;
@@ -622,12 +672,25 @@ inline void MGVM::runBytecode(const std::vector<uint8_t>& bytecode,bool run_dire
         case op_load_mem:
         case op_store_mem:
             break;
+        case op_ext:
+        {
+            inst.num = readI32();
+            // 读取8字节double
+            uint8_t dbuf[8];
+            for(int i=0; i<8; i++) dbuf[i]=readU8();
+            std::memcpy(&inst.fnum, dbuf, sizeof(double));
+            break;
+        }
+        case op_ffi_call:
+            inst.num = readI32();
+            break;
+
         default:
             break;
         }
         code.push_back(inst);
     }
-    if(run_directly){
+    if(run_directly) {
         run();
     }
 }
@@ -767,6 +830,28 @@ inline std::string MGVM::disasm()
         case op_store_mem:
             // 无参数
             break;
+        case op_ext:
+        {
+            int sub = static_cast<int>(inst.num);
+            const auto& nameMap = GetExtOpNameMap();
+            auto it = nameMap.find(sub);
+            if(it != nameMap.end()) {
+                oss << " " << it->second;
+                // 如果是fpush，打印浮点数
+                if(sub == extop_fpush)
+                {
+                    oss << " " << inst.fnum;
+                }
+            } else {
+                oss << " " << sub;
+            }
+            break;
+        }
+
+        case op_ffi_call:
+            oss << " " << inst.num;
+            break;
+
         default:
             oss << " ; unhandled op";
             break;

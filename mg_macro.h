@@ -7,11 +7,13 @@
 #include "mg_opcode.h"
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY-XA
- * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
+ * Copyright © 2026 SKY‑XA
+ * Underlying runtime implementation for two self‑developed programming languages.
+ * These two languages may be developed and released in the future.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
- * Note: Official full bundled interpreters of ML & Lava are copyrighted.
+ * Note: Official full bundled interpreters are copyrighted.
  */
+
 namespace mg_macro {
 using MacroExpandResult = std::vector<std::string>;
 using MacroHandler = MacroExpandResult (*)(const std::vector<std::string>& args);
@@ -115,7 +117,7 @@ inline MacroExpandResult macro_mov_zero(const std::vector<std::string>& args) {
 
 inline MacroExpandResult macro_clr_vars(const std::vector<std::string>& args) {
     MacroExpandResult out;
-    for(auto &v : args){
+    for(auto &v : args) {
         out.push_back("mov " + v + ", 0");
     }
     return out;
@@ -124,7 +126,7 @@ inline MacroExpandResult macro_clr_vars(const std::vector<std::string>& args) {
 // ==================== 【新增：栈便捷宏】 ====================
 inline MacroExpandResult macro_push_vars(const std::vector<std::string>& args) {
     MacroExpandResult out;
-    for(auto &v : args){
+    for(auto &v : args) {
         out.push_back("load_var " + v);
     }
     return out;
@@ -132,7 +134,7 @@ inline MacroExpandResult macro_push_vars(const std::vector<std::string>& args) {
 
 inline MacroExpandResult macro_pop_vars(const std::vector<std::string>& args) {
     MacroExpandResult out;
-    for(auto &v : args){
+    for(auto &v : args) {
         out.push_back("pop " + v);
     }
     return out;
@@ -267,6 +269,76 @@ inline MacroExpandResult macro_arr_get(const std::vector<std::string>& args) {
     out.push_back("load_mem");
     return out;
 }
+//==================== 浮点运算宏包装（op_ext子指令别名） ====================
+inline MacroExpandResult macro_fpush(const std::vector<std::string>& args) {
+    // args[0] 是浮点数字面量，直接展开: ext extop_fpush <数值>
+    return {"ext extop_fpush " + args[0]};
+}
+
+inline MacroExpandResult macro_itof(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_itof"};
+}
+
+inline MacroExpandResult macro_ftoi(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_ftoi"};
+}
+
+inline MacroExpandResult macro_fadd(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fadd"};
+}
+
+inline MacroExpandResult macro_fsub(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fsub"};
+}
+
+inline MacroExpandResult macro_fmul(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fmul"};
+}
+
+inline MacroExpandResult macro_fdiv(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fdiv"};
+}
+
+inline MacroExpandResult macro_fneg(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fneg"};
+}
+
+inline MacroExpandResult macro_fabs(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fabs"};
+}
+
+inline MacroExpandResult macro_fsqrt(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fsqrt"};
+}
+
+inline MacroExpandResult macro_fsin(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fsin"};
+}
+
+inline MacroExpandResult macro_fcos(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_fcos"};
+}
+
+inline MacroExpandResult macro_floor(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_floor"};
+}
+
+inline MacroExpandResult macro_ceil(const std::vector<std::string>& args) {
+    (void)args;
+    return {"ext extop_ceil"};
+}
 
 
 inline const std::unordered_map<std::string, MacroHandler> MACRO_MAP = {
@@ -296,9 +368,25 @@ inline const std::unordered_map<std::string, MacroHandler> MACRO_MAP = {
     {"var_inc_to", macro_var_inc_to},
     {"print_str", macro_print_str},
     {"swap_var", macro_swap_var},
-        
+
     {"arr_set", macro_arr_set},
-    {"arr_get", macro_arr_get}
+    {"arr_get", macro_arr_get},
+
+    {"fpush",   macro_fpush},
+    {"itof",    macro_itof},
+    {"ftoi",    macro_ftoi},
+    {"fadd",    macro_fadd},
+    {"fsub",    macro_fsub},
+    {"fmul",    macro_fmul},
+    {"fdiv",    macro_fdiv},
+    {"fneg",    macro_fneg},
+    {"fabs",    macro_fabs},
+    {"fsqrt",   macro_fsqrt},
+    {"fsin",    macro_fsin},
+    {"fcos",    macro_fcos},
+    {"floor",   macro_floor},
+    {"ceil",    macro_ceil},
+
 };
 
 

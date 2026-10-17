@@ -2,11 +2,13 @@
 #define MG_OPCODE_H
 /*
  * MGVM Implementation
- * Copyright © 2026 SKY-XA
- * Underlying runtime implementation for self‑developed ML (MemLock) & Lava languages.
+ * Copyright © 2026 SKY‑XA
+ * Underlying runtime implementation for two self‑developed programming languages.
+ * These two languages may be developed and released in the future.
  * Full license terms: see repository root LICENSE / LICENSE‑CH.
- * Note: Official full bundled interpreters of ML & Lava are copyrighted.
+ * Note: Official full bundled interpreters are copyrighted.
  */
+
 
 #include <string>
 #include <unordered_map>
@@ -67,6 +69,9 @@ enum OpCode {
     op_alloc,
     op_load_mem,
     op_store_mem,
+    
+    op_ext,
+    op_ffi_call,
 
     // 【极限优化必需】数组大小标记，不影响原有逻辑
     OP_COUNT
@@ -79,6 +84,7 @@ extern const std::unordered_map<std::string, OpCode> OPCODE_MAP;
 struct Instruction {
     OpCode op = op_invalid;
     long long num = 0;       // 数字参数
+    double fnum = 0.0;       // 浮点数参数
     std::string str1 = "";   // 第一个字符串参数
     std::string str2 = "";   // 第二个字符串参数
     int line = 0;            // 行号（报错用）
